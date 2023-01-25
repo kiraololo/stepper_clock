@@ -12,24 +12,23 @@
 // Пин, к которому подключен светодиод на плате
 // Будем мигать им в такт секундам для визуального контроля
 #define BOARD_LED 13
+// Пины контроля микрошага
+#define MS1 7
+#define MS2 8
+#define MS3 9
 
 // Угол поворота вала за один шаг
 // для самых распространенных двигателей- это 
 // значение составляет 1.8 градуса
 #define step_angle 1.8
-// Микрошаг настроенный на драйвере
-#define micro_step 64
 // Коэффициент поправки времени тика (в милисекундах)
 // зависящий от механических свойств мотора, подбирается имперически
 #define mechanical_time_coeff 5
 // Инвертировать направление движения мотора
 #define reverse false
 
-// Считаем кол-во шагов с учетом микрошага и угла, которое мотор 
-// может сделать за 1 оборот
-float motorStepsCount = (360 / step_angle) * micro_step;
 // Считаем скорость мотора в шагах в секунду
-float motorSpeed = motorStepsCount / 60;
+float motorSpeed = 200 / 60;
 // Предидущая секунда
 word prevSecond = 0;
 // Флаг первой итерации программы
@@ -39,15 +38,33 @@ boolean ledOn = false;
 // Время последнего включения индикатора
 unsigned long ledOnTime;
 
-// Инициализируем мотор
-Stepper stepper(motorStepsCount, STEP_PIN, DIR_PIN);
+// Инициализируем мотор (по умолчанию 200 шагов)
+Stepper stepper(200, STEP_PIN, DIR_PIN);
 MicroDS3231 rtc;
 
 void setup() {
   Serial.begin(9600);
   // Инициализируем светодиод на плате
   pinMode(BOARD_LED, OUTPUT);
+
+  word microStep = 1;
+  if(digitalRead(MS1) == 1) {
+    microStep *= 4;
+  }
+  if(digitalRead(MS2) == 1) {
+    microStep *= 4;
+  }
+  if(digitalRead(MS3) == 1) {
+    microStep *= 4;
+  }
+
   // Устанавливаем скорость
+  // Считаем кол-во шагов с учетом микрошага и угла, которое мотор 
+  // может сделать за 1 оборот
+  float motorStepsCount = (360 / step_angle) * microStep;
+  motorSpeed = motorStepsCount / 60;
+  stepper = Stepper(motorStepsCount, STEP_PIN, DIR_PIN);
+
   stepper.setSpeed(motorSpeed);
   // проверка наличия модуля на линии i2c
   if (!rtc.begin()) {
